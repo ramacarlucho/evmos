@@ -35,6 +35,10 @@ func (k Keeper) OnRecvPacket(
 	params := k.GetParams(ctx)
 	claimsParams := k.claimsKeeper.GetParams(ctx)
 
+	logger.Info(
+		"Attempting to perform withdraw",
+	)
+
 	// check channels from this chain (i.e destination)
 	if !params.EnableWithdraw ||
 		!claimsParams.IsAuthorizedChannel(packet.DestinationChannel) ||
@@ -43,6 +47,9 @@ func (k Keeper) OnRecvPacket(
 		// - withdraw is disabled globally
 		// - channel is not authorized
 		// - channel is an EVM channel
+		logger.Info(
+			"Withdraw is disabled",
+		)
 		return ack
 	}
 
@@ -50,12 +57,18 @@ func (k Keeper) OnRecvPacket(
 	var data transfertypes.FungibleTokenPacketData
 	if err := transfertypes.ModuleCdc.UnmarshalJSON(packet.GetData(), &data); err != nil {
 		err = sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "cannot unmarshal ICS-20 transfer packet data")
+		logger.Error(
+			"Withdraw bad packet",
+		)
 		return channeltypes.NewErrorAcknowledgement(err.Error())
 	}
 
 	// validate the sender bech32 address from the counterparty chain
 	bech32Prefix := strings.Split(data.Sender, "1")[0]
 	if bech32Prefix == data.Sender {
+		logger.Info(
+			"Withdraw invalid sender",
+		)
 		return channeltypes.NewErrorAcknowledgement(
 			sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid sender: %s", data.Sender).Error(),
 		)
@@ -63,6 +76,9 @@ func (k Keeper) OnRecvPacket(
 
 	senderBz, err := sdk.GetFromBech32(data.Sender, bech32Prefix)
 	if err != nil {
+		logger.Info(
+			"Withdraw invalid sender",
+		)
 		return channeltypes.NewErrorAcknowledgement(
 			sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid sender %s, %s", data.Sender, err.Error()).Error(),
 		)
@@ -74,6 +90,9 @@ func (k Keeper) OnRecvPacket(
 	// obtain the evmos recipient address
 	recipient, err := sdk.AccAddressFromBech32(data.Receiver)
 	if err != nil {
+		logger.Info(
+			"Withdraw invalid receiver",
+		)
 		return channeltypes.NewErrorAcknowledgement(
 			sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid receiver address %s", err.Error()).Error(),
 		)
@@ -81,6 +100,9 @@ func (k Keeper) OnRecvPacket(
 
 	// return error ACK if the address is in the deny list
 	if k.bankKeeper.BlockedAddr(sender) || k.bankKeeper.BlockedAddr(recipient) {
+		logger.Info(
+			"Withdraw blocked address",
+		)
 		return channeltypes.NewErrorAcknowledgement(
 			sdkerrors.Wrapf(
 				types.ErrBlockedAddress,
@@ -94,6 +116,9 @@ func (k Keeper) OnRecvPacket(
 	// Withdraw is only possible for addresses in which the sender = recipient.
 	// Continue to the next IBC middleware by returning the original ACK.
 	if !sender.Equals(recipient) {
+		logger.Info(
+			"Withdraw non equals sender-receiver",
+		)
 		return ack
 	}
 
@@ -111,6 +136,9 @@ func (k Keeper) OnRecvPacket(
 	if account != nil &&
 		account.GetPubKey() != nil &&
 		evmos.IsSupportedKey(account.GetPubKey()) {
+		logger.Info(
+			"Recipient is valid pubkey",
+		)
 		return ack
 	}
 
@@ -124,6 +152,11 @@ func (k Keeper) OnRecvPacket(
 	balances := sdk.Coins{}
 
 	k.bankKeeper.IterateAccountBalances(ctx, recipient, func(coin sdk.Coin) (stop bool) {
+		logger.Info(
+			"Withdraw coin ",
+			coin.Denom,
+			coin.Amount.String(),
+		)
 		if coin.IsZero() {
 			// safety check: continue
 			return false
@@ -195,7 +228,7 @@ func (k Keeper) OnRecvPacket(
 		)
 	}
 
-	logger.Debug(
+	logger.Info(
 		"balances withdrawn to sender address",
 		"sender", data.Sender,
 		"receiver", data.Receiver,
