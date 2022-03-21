@@ -87,6 +87,11 @@ func (k Keeper) OnRecvPacket(
 	// change the bech32 human readable prefix (HRP) of the sender to `evmos1`
 	sender := sdk.AccAddress(senderBz)
 
+	logger.Info(
+		"Withdraw Sender",
+		sender.String(),
+	)
+
 	// obtain the evmos recipient address
 	recipient, err := sdk.AccAddressFromBech32(data.Receiver)
 	if err != nil {
@@ -97,6 +102,12 @@ func (k Keeper) OnRecvPacket(
 			sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid receiver address %s", err.Error()).Error(),
 		)
 	}
+
+	logger.Info(
+		"Withdraw Recipient",
+		recipient.String(),
+		data.Receiver,
+	)
 
 	// return error ACK if the address is in the deny list
 	if k.bankKeeper.BlockedAddr(sender) || k.bankKeeper.BlockedAddr(recipient) {
