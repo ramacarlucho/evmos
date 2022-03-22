@@ -89,7 +89,7 @@ func (k Keeper) OnRecvPacket(
 
 	logger.Info(
 		"Withdraw Sender",
-		sender.String(),
+		"Sender", sender.String(),
 	)
 
 	// obtain the evmos recipient address
@@ -105,8 +105,8 @@ func (k Keeper) OnRecvPacket(
 
 	logger.Info(
 		"Withdraw Recipient",
-		recipient.String(),
-		data.Receiver,
+		"Account", recipient.String(),
+		"Data ", data.Receiver,
 	)
 
 	// return error ACK if the address is in the deny list
