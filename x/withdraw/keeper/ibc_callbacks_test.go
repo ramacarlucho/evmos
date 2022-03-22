@@ -17,6 +17,7 @@ import (
 	ibcmock "github.com/cosmos/ibc-go/v3/testing/mock"
 
 	claimstypes "github.com/tharsis/evmos/v2/x/claims/types"
+	incentivestypes "github.com/tharsis/evmos/v2/x/incentives/types"
 	vestingtypes "github.com/tharsis/evmos/v2/x/vesting/types"
 	"github.com/tharsis/evmos/v2/x/withdraw/keeper"
 	"github.com/tharsis/evmos/v2/x/withdraw/types"
@@ -165,6 +166,19 @@ func (suite *KeeperTestSuite) TestOnRecvPacket() {
 			false,
 		},
 		{
+			"continue - receiver is a module account",
+			func() {
+				incentivesAcc := suite.app.AccountKeeper.GetModuleAccount(suite.ctx, incentivestypes.ModuleName)
+				suite.Require().NotNil(incentivesAcc)
+				addr := incentivesAcc.GetAddress().String()
+				transfer := transfertypes.NewFungibleTokenPacketData(denom, "100", addr, addr)
+				bz := transfertypes.ModuleCdc.MustMarshalJSON(&transfer)
+				packet = channeltypes.NewPacket(bz, 100, transfertypes.PortID, sourceChannel, transfertypes.PortID, evmosChannel, timeoutHeight, 0)
+			},
+			true,
+			false,
+		},
+		{
 			"continue - case 2: receiver pubkey is a supported key",
 			func() {
 				// Set account to generate a pubkey
@@ -177,7 +191,6 @@ func (suite *KeeperTestSuite) TestOnRecvPacket() {
 			true,
 			false,
 		},
-
 		{
 			"withdraw - send uatom from cosmos to evmos",
 			func() {
@@ -250,22 +263,23 @@ func (suite *KeeperTestSuite) TestOnRecvPacket() {
 			// Mock the Transferkeeper to always return nil on SendTransfer(), as this
 			// method requires a successfull handshake with the counterparty chain.
 			// This, however, exceeds the requirements of the unit tests.
-			mockedKeeper := &TransferKeeper{
+			mockTransferKeeper := &MockTransferKeeper{
 				Keeper: suite.app.BankKeeper,
 			}
 
-			mockedKeeper.On("GetDenomTrace", mock.Anything).Return(denomTrace, true)
-			mockedKeeper.On("SendTransfer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+			mockTransferKeeper.On("GetDenomTrace", mock.Anything, mock.Anything).Return(denomTrace, true)
+			mockTransferKeeper.On("SendTransfer", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 			sp, found := suite.app.ParamsKeeper.GetSubspace(types.ModuleName)
 			suite.Require().True(found)
-			suite.app.WithdrawKeeper = keeper.NewKeeper(sp, suite.app.AccountKeeper, suite.app.BankKeeper, suite.app.IBCKeeper.ChannelKeeper, mockedKeeper, suite.app.ClaimsKeeper)
+			suite.app.WithdrawKeeper = keeper.NewKeeper(sp, suite.app.AccountKeeper, suite.app.BankKeeper, suite.app.IBCKeeper.ChannelKeeper, mockTransferKeeper, suite.app.ClaimsKeeper)
 
-			// Fund receiver account with aevmos and ibc coin
+			// Fund receiver account with EVMOS, ERC20 coins and IBC vouchers
 			coins := sdk.NewCoins(
 				sdk.NewCoin("aevmos", sdk.NewInt(1000)),
 				sdk.NewCoin(ibcAtomDenom, sdk.NewInt(1000)),
 				sdk.NewCoin(ibcOsmoDenom, sdk.NewInt(1000)),
+				sdk.NewCoin(erc20Denom, sdk.NewInt(1000)),
 			)
 			testutil.FundAccount(suite.app.BankKeeper, suite.ctx, secpAddr, coins)
 
