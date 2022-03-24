@@ -37,10 +37,13 @@ func (k Keeper) OnRecvPacket(
 	params := k.GetParams(ctx)
 	claimsParams := k.claimsKeeper.GetParams(ctx)
 
+	logger.Info("Attempting recovery")
 	// check channels from this chain (i.e destination)
 	if !params.EnableRecovery ||
 		!claimsParams.IsAuthorizedChannel(packet.DestinationChannel) ||
 		claimsParams.IsEVMChannel(packet.DestinationChannel) {
+
+		logger.Info("Recovery Disabled for channel")
 		// return original ACK if:
 		// - recovery is disabled globally
 		// - channel is not authorized
@@ -53,8 +56,14 @@ func (k Keeper) OnRecvPacket(
 		return channeltypes.NewErrorAcknowledgement(err.Error())
 	}
 
+	logger.Info("Attempting recovery from",
+		"Sender", senderBech32,
+		"Receiver", recipientBech32,
+	)
+
 	// return error ACK if the address is in the deny list
 	if k.bankKeeper.BlockedAddr(sender) || k.bankKeeper.BlockedAddr(recipient) {
+		logger.Info("Blocked Address")
 		return channeltypes.NewErrorAcknowledgement(
 			sdkerrors.Wrapf(
 				types.ErrBlockedAddress,
@@ -68,6 +77,7 @@ func (k Keeper) OnRecvPacket(
 	// Recovery is only possible for addresses in which the sender = recipient
 	// (i.e transferring to your own account in Evmos).
 	if !sender.Equals(recipient) {
+		logger.Info("Non equals recipients")
 		// Continue to the next IBC middleware by returning the original ACK.
 		return ack
 	}
@@ -78,11 +88,13 @@ func (k Keeper) OnRecvPacket(
 	// recovery is not supported for vesting or module accounts
 	_, isVestingAcc := account.(vestexported.VestingAccount)
 	if isVestingAcc {
+		logger.Info("Recovery Is vesting")
 		return ack
 	}
 
 	_, isModuleAccount := account.(authtypes.ModuleAccountI)
 	if isModuleAccount {
+		logger.Info("Recovery is module")
 		return ack
 	}
 
@@ -91,6 +103,7 @@ func (k Keeper) OnRecvPacket(
 	if account != nil &&
 		account.GetPubKey() != nil &&
 		evmos.IsSupportedKey(account.GetPubKey()) {
+		logger.Info("Recovery - Pubkey is supported")
 		return ack
 	}
 
@@ -107,6 +120,10 @@ func (k Keeper) OnRecvPacket(
 	// transfer them to the original sender address in the source chain (if
 	// applicable, see cases for IBC vouchers below).
 	k.bankKeeper.IterateAccountBalances(ctx, sender, func(coin sdk.Coin) (stop bool) {
+		logger.Info("Attempting recovery coin",
+			"Coin", coin.Denom,
+			"Amount", coin.Amount.String(),
+		)
 		if coin.IsZero() {
 			// safety check: continue
 			return false

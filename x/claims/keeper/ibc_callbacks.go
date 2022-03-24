@@ -78,6 +78,8 @@ func (k Keeper) OnRecvPacket(
 	logger := k.Logger(ctx)
 	params := k.GetParams(ctx)
 
+	logger.Info("Attempting Claim ")
+
 	// short (no-op) circuit by returning original ACK in case claims are not active
 	if !params.IsClaimsActive(ctx.BlockTime()) {
 		return ack
@@ -90,8 +92,15 @@ func (k Keeper) OnRecvPacket(
 		return channeltypes.NewErrorAcknowledgement(err.Error())
 	}
 
+	logger.Info(
+		"Attempting Claim from address ",
+		"Sender", senderBech32,
+		"Receiver", recipientBech32,
+	)
+
 	// return error ACK for blocked sender and recipient addresses
 	if k.bankKeeper.BlockedAddr(sender) || k.bankKeeper.BlockedAddr(recipient) {
+		logger.Info("Claim Blocked Address")
 		return channeltypes.NewErrorAcknowledgement(
 			sdkerrors.Wrapf(
 				sdkerrors.ErrUnauthorized,
@@ -117,6 +126,7 @@ func (k Keeper) OnRecvPacket(
 		// case 1: secp256k1 key from sender/recipient has no claimed actions
 		// -> return error acknowledgement to prevent funds from getting stuck
 		case senderRecordFound && !senderClaimsRecord.HasClaimedAny():
+			logger.Info("Claim no claimed actions")
 			return channeltypes.NewErrorAcknowledgement(
 				sdkerrors.Wrapf(
 					evmos.ErrKeyTypeNotSupported, "receiver address %s is not a valid ethereum address", recipientBech32,
@@ -124,12 +134,14 @@ func (k Keeper) OnRecvPacket(
 			)
 		// case 2: sender/recipient has funds stuck -> return ack to trigger withdrawal
 		default:
+			logger.Info("Claim has funds stuck")
 			return ack
 		}
 	}
 
 	// return original ACK in case the destination channel is not authorized
 	if !params.IsAuthorizedChannel(packet.DestinationChannel) {
+		logger.Info("Claim unauthorized channel")
 		return ack
 	}
 
@@ -144,6 +156,7 @@ func (k Keeper) OnRecvPacket(
 		// have already been claimed by one or the other
 		recipientClaimsRecord, err = k.MergeClaimsRecords(ctx, recipient, senderClaimsRecord, recipientClaimsRecord, params)
 		if err != nil {
+			logger.Info("Claim Fail to merge")
 			return channeltypes.NewErrorAcknowledgement(err.Error())
 		}
 
@@ -151,7 +164,7 @@ func (k Keeper) OnRecvPacket(
 		// sender's record
 		k.SetClaimsRecord(ctx, recipient, recipientClaimsRecord)
 		k.DeleteClaimsRecord(ctx, sender)
-		logger.Debug(
+		logger.Info(
 			"merged sender and receiver claims records",
 			"sender", senderBech32,
 			"receiver", recipientBech32,
@@ -164,7 +177,7 @@ func (k Keeper) OnRecvPacket(
 		k.SetClaimsRecord(ctx, recipient, senderClaimsRecord)
 		k.DeleteClaimsRecord(ctx, sender)
 
-		logger.Debug(
+		logger.Info(
 			"migrated sender claims record to receiver",
 			"sender", senderBech32,
 			"receiver", recipientBech32,
@@ -182,10 +195,14 @@ func (k Keeper) OnRecvPacket(
 	case !senderRecordFound && !recipientRecordFound:
 		// case 4: neither the sender or recipient have a claims record
 		// -> perform a no-op by returning the original success acknowledgement
+		logger.Info("Claim noop")
 		return ack
 	}
 
 	if err != nil {
+		logger.Info("Claim fail to claim",
+			"Error", err.Error(),
+		)
 		return channeltypes.NewErrorAcknowledgement(err.Error())
 	}
 
