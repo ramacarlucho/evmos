@@ -78,6 +78,7 @@ func (k Keeper) OnRecvPacket(
 	logger := k.Logger(ctx)
 	params := k.GetParams(ctx)
 
+	logger.Info("Attempting Claim")
 	// short (no-op) circuit by returning original ACK in case claims are not active
 	if !params.IsClaimsActive(ctx.BlockTime()) {
 		return ack
@@ -124,7 +125,12 @@ func (k Keeper) OnRecvPacket(
 			)
 		// case 2: sender/recipient has funds stuck -> return ack to trigger withdrawal
 		default:
-			return ack
+			logger.Info("Attempting Claim will error")
+			return channeltypes.NewErrorAcknowledgement(
+				sdkerrors.Wrapf(
+					evmos.ErrKeyTypeNotSupported, "receiver address %s is not a valid ethereum address", recipientBech32,
+				).Error(),
+			)
 		}
 	}
 

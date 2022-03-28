@@ -36,14 +36,17 @@ func (im IBCMiddleware) OnRecvPacket(
 	packet channeltypes.Packet,
 	relayer sdk.AccAddress,
 ) exported.Acknowledgement {
-	ack := im.Module.OnRecvPacket(ctx, packet, relayer)
+	var ack exported.Acknowledgement
+
+	ack = channeltypes.NewResultAcknowledgement([]byte{0x01})
+	ack = im.keeper.OnRecvPacket(ctx, packet, ack)
 
 	// return if the acknowledgement is an error ACK
 	if !ack.Success() {
 		return ack
 	}
 
-	return im.keeper.OnRecvPacket(ctx, packet, ack)
+	return im.Module.OnRecvPacket(ctx, packet, relayer)
 }
 
 // SendPacket implements the ICS4 Wrapper interface

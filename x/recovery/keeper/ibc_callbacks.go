@@ -34,6 +34,7 @@ func (k Keeper) OnRecvPacket(
 ) exported.Acknowledgement {
 	logger := k.Logger(ctx)
 
+	logger.Info("Attempting Recovery")
 	params := k.GetParams(ctx)
 	claimsParams := k.claimsKeeper.GetParams(ctx)
 
@@ -64,6 +65,10 @@ func (k Keeper) OnRecvPacket(
 		)
 	}
 
+	logger.Info("Attempting Recovery",
+		"Sender", senderBech32,
+		"Receiver", recipientBech32,
+	)
 	// case 1: sender ≠ recipient.
 	// Recovery is only possible for addresses in which the sender = recipient
 	// (i.e transferring to your own account in Evmos).
@@ -112,6 +117,9 @@ func (k Keeper) OnRecvPacket(
 			return false
 		}
 
+		logger.Info("Attempting Recovery",
+			"Sending Coins", coin.String(),
+		)
 		if strings.HasPrefix(coin.Denom, "ibc/") {
 			// IBC vouchers, obtain the source port and channel from the denom path
 			destPort, destChannel, err = k.GetIBCDenomDestinationIdentifiers(ctx, coin.Denom, senderBech32)
