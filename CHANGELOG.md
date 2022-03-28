@@ -39,6 +39,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 
 ### State Machine Breaking
 
+- [\#430](https://github.com/tharsis/evmos/pull/430) Exclusively delete claims records at the end of the claims period.
 - [\#342](https://github.com/tharsis/evmos/pull/342) Implement IBC middleware to recover stuck funds
 
 ### API Breaking
@@ -53,12 +54,14 @@ Ref: https://keepachangelog.com/en/1.0.0/
 
 ### Improvements
 
+- (deps) [\#427](https://github.com/tharsis/evmos/pull/427) Bump Ethermint to [`v0.12.0`](https://github.com/tharsis/ethermint/releases/tag/v0.12.0)
 - (ibc) [\#412](https://github.com/tharsis/evmos/pull/412) Introduce boilerplate struct for IBC applications.
 - (deps) [\#402](https://github.com/tharsis/evmos/pull/402) Bump IBC go to [`v3.0.0`](https://github.com/cosmos/ibc-go/releases/tag/v3.0.0)
 - (ibctesting) [\#388](https://github.com/tharsis/evmos/pull/388) Support Cosmos and EVM chains in IBC testing `Coordinator`.
 - (claims) [\#385](https://github.com/tharsis/evmos/pull/385) Add claims invariant.
 - (inflation) [\#383](https://github.com/tharsis/evmos/pull/383) Add gRPC endpoints for inflation rate and total supply
 - (inflation) [\#369](https://github.com/tharsis/evmos/pull/369) Add `enableInflation` parameter.
+- (claims) [\#432](https://github.com/tharsis/evmos/pull/432) Add IBC trigger amount to claims merge/migrate IBC callbacks.
 
 ## [v2.0.1] - 2022-03-06
 
