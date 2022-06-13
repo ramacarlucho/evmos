@@ -3,8 +3,8 @@
 ## Build Image
 FROM golang:1.18-bullseye as build
 
-WORKDIR /osmosis
-COPY . /osmosis
+WORKDIR /evmos
+COPY . /evmos
 
 # From https://github.com/CosmWasm/wasmd/blob/master/Dockerfile
 # For more details see https://github.com/CosmWasm/wasmvm#builds-of-libwasmvm 
@@ -15,9 +15,9 @@ RUN BUILD_TAGS=muslc make build-e2e-chain-init
 ## Deploy image
 FROM ubuntu
 
-COPY --from=build /osmosis/build/chain_init /bin/chain_init
+COPY --from=build /evmos/build/chain_init /bin/chain_init
 
-ENV HOME /osmosis
+ENV HOME /evmos
 WORKDIR $HOME
 
 ENTRYPOINT [ "chain_init" ]

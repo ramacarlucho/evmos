@@ -180,7 +180,7 @@ func (s *IntegrationTestSuite) depositProposal(c *chain.Chain) {
 			"/usr/bin/evmosd",
 			"--home",
 			"/evmos/.evmosd",
-			"tx", "gov", "deposit", "1", "10000000stake", "--from=val", fmt.Sprintf("--chain-id=%s", c.ChainMeta.ID), "-b=block", "--yes", "--keyring-backend=test",
+			"tx", "gov", "deposit", "1", "10000000aevmos", "--from=val", fmt.Sprintf("--chain-id=%s", c.ChainMeta.ID), "-b=block", "--yes", "--keyring-backend=test",
 		},
 	})
 	s.Require().NoError(err)

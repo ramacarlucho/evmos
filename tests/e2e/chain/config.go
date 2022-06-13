@@ -19,7 +19,12 @@ import (
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tharsis/ethermint/server/config"
 
+	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	evmtypes "github.com/tharsis/ethermint/x/evm/types"
 	"github.com/tharsis/evmos/v4/tests/e2e/util"
+	claimstypes "github.com/tharsis/evmos/v4/x/claims/types"
+	inflationtypes "github.com/tharsis/evmos/v4/x/inflation/types"
 )
 
 type ValidatorConfig struct {
@@ -32,21 +37,21 @@ type ValidatorConfig struct {
 
 const (
 	// common
-	CoinDenom     = "ucoin"
-	StakeDenom    = "stake"
-	IbcDenom      = "ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518"
+	CoinDenom  = "ucoin"
+	StakeDenom = "aevmos"
+	//IbcDenom      = "ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518"
 	MinGasPrice   = "0.000"
 	IbcSendAmount = 3300000000
 	VotingPeriod  = 30000000000 // 30 seconds
 	// chainA
-	ChainAID      = "evmos_9001-1"
+	ChainAID      = "evmos_9001-2"
 	CoinBalanceA  = 2000000000000000000
 	StakeBalanceA = 1100000000000000000
 	StakeAmountA  = 1000000000000000000
 
 	// Currently only running one chain, so this is not used
 	// chainB
-	ChainBID      = "evmos_9000-1"
+	ChainBID      = "evmos_9000-2"
 	CoinBalanceB  = 5000000000000000000
 	StakeBalanceB = 4400000000000000000
 	StakeAmountB  = 4000000000000000000
@@ -133,19 +138,7 @@ func addAccount(path, moniker, amountStr string, accAddr sdk.AccAddress) error {
 	return genutil.ExportGenesisFile(genDoc, genFile)
 }
 
-func initGenesis(c *internalChain) error {
-	serverCtx := server.NewDefaultContext()
-	config := serverCtx.Config
-
-	config.SetRoot(c.validators[0].configDir())
-	config.Moniker = c.validators[0].getMoniker()
-
-	genFilePath := config.GenesisFile()
-	appGenState, genDoc, err := genutiltypes.GenesisStateFromGenFile(genFilePath)
-	if err != nil {
-		return err
-	}
-
+func updateBankModule(appGenState map[string]json.RawMessage) error {
 	var bankGenState banktypes.GenesisState
 	if err := util.Cdc.UnmarshalJSON(appGenState[banktypes.ModuleName], &bankGenState); err != nil {
 		return err
@@ -170,7 +163,10 @@ func initGenesis(c *internalChain) error {
 		return err
 	}
 	appGenState[banktypes.ModuleName] = bz
+	return nil
+}
 
+func updateGovModule(appGenState map[string]json.RawMessage) error {
 	var govGenState govtypes.GenesisState
 	if err := util.Cdc.UnmarshalJSON(appGenState[govtypes.ModuleName], &govGenState); err != nil {
 		return err
@@ -180,12 +176,81 @@ func initGenesis(c *internalChain) error {
 		VotingPeriod: VotingPeriod,
 	}
 
+	govGenState.DepositParams.MinDeposit = sdk.NewCoins(sdk.NewCoin("aevmos", sdk.ZeroInt()))
+
 	gz, err := util.Cdc.MarshalJSON(&govGenState)
 	if err != nil {
 		return err
 	}
 	appGenState[govtypes.ModuleName] = gz
+	return nil
+}
 
+func updateStakingModule(appGenState map[string]json.RawMessage) error {
+	var stakingGenState stakingtypes.GenesisState
+	if err := util.Cdc.UnmarshalJSON(appGenState[stakingtypes.ModuleName], &stakingGenState); err != nil {
+		return err
+	}
+
+	stakingGenState.Params.BondDenom = "aevmos"
+
+	bz, err := util.Cdc.MarshalJSON(&stakingGenState)
+	if err != nil {
+		return err
+	}
+	appGenState[stakingtypes.ModuleName] = bz
+	return nil
+}
+
+func updateCrisisModule(appGenState map[string]json.RawMessage) error {
+	var crisisGenState crisistypes.GenesisState
+	if err := util.Cdc.UnmarshalJSON(appGenState[crisistypes.ModuleName], &crisisGenState); err != nil {
+		return err
+	}
+
+	crisisGenState.ConstantFee.Denom = "aevmos"
+
+	bz, err := util.Cdc.MarshalJSON(&crisisGenState)
+	if err != nil {
+		return err
+	}
+	appGenState[crisistypes.ModuleName] = bz
+	return nil
+}
+
+func updateEvmModule(appGenState map[string]json.RawMessage) error {
+	var evmGenState evmtypes.GenesisState
+	if err := util.Cdc.UnmarshalJSON(appGenState[evmtypes.ModuleName], &evmGenState); err != nil {
+		return err
+	}
+
+	evmGenState.Params.EvmDenom = "aevmos"
+
+	bz, err := util.Cdc.MarshalJSON(&evmGenState)
+	if err != nil {
+		return err
+	}
+	appGenState[evmtypes.ModuleName] = bz
+	return nil
+}
+
+func updateInflationModule(appGenState map[string]json.RawMessage) error {
+	var inflationGenState inflationtypes.GenesisState
+	if err := util.Cdc.UnmarshalJSON(appGenState[inflationtypes.ModuleName], &inflationGenState); err != nil {
+		return err
+	}
+
+	inflationGenState.Params.MintDenom = "aevmos"
+
+	bz, err := util.Cdc.MarshalJSON(&inflationGenState)
+	if err != nil {
+		return err
+	}
+	appGenState[inflationtypes.ModuleName] = bz
+	return nil
+}
+
+func updateGenTxs(appGenState map[string]json.RawMessage, c *internalChain) error {
 	var genUtilGenState genutiltypes.GenesisState
 	if err := util.Cdc.UnmarshalJSON(appGenState[genutiltypes.ModuleName], &genUtilGenState); err != nil {
 		return err
@@ -218,13 +283,83 @@ func initGenesis(c *internalChain) error {
 
 	genUtilGenState.GenTxs = genTxs
 
-	bz, err = util.Cdc.MarshalJSON(&genUtilGenState)
+	bz, err := util.Cdc.MarshalJSON(&genUtilGenState)
 	if err != nil {
 		return err
 	}
 	appGenState[genutiltypes.ModuleName] = bz
+	return nil
+}
 
-	bz, err = json.MarshalIndent(appGenState, "", "  ")
+func updateClaimsModule(appGenState map[string]json.RawMessage) error {
+	var claimsGenState claimstypes.GenesisState
+	if err := util.Cdc.UnmarshalJSON(appGenState[claimstypes.ModuleName], &claimsGenState); err != nil {
+		return err
+	}
+
+	claimsGenState.ClaimsRecords = append(claimsGenState.ClaimsRecords,
+		claimstypes.ClaimsRecordAddress{Address: "evmos13cf9npvns2vhh3097909mkhfxngmw6d6eppfm4",
+			InitialClaimableAmount: sdk.NewInt(0),
+			ActionsCompleted:       []bool{false, false, false, true},
+		})
+	claimsGenState.ClaimsRecords = append(claimsGenState.ClaimsRecords,
+		claimstypes.ClaimsRecordAddress{Address: "evmos17xpfvakm2amg962yls6f84z3kell8c5ljcjw34",
+			InitialClaimableAmount: sdk.NewInt(0),
+			ActionsCompleted:       []bool{true, true, false, true},
+		})
+	claimsGenState.ClaimsRecords = append(claimsGenState.ClaimsRecords,
+		claimstypes.ClaimsRecordAddress{Address: "evmos1x8eupnk7hhnnm5m824qt53203w0m6x7tkr5l9u",
+			InitialClaimableAmount: sdk.NewInt(0),
+			ActionsCompleted:       []bool{false, true, false, false},
+		})
+
+	bz, err := util.Cdc.MarshalJSON(&claimsGenState)
+	if err != nil {
+		return err
+	}
+	appGenState[claimstypes.ModuleName] = bz
+	return nil
+}
+
+func initGenesis(c *internalChain) error {
+	serverCtx := server.NewDefaultContext()
+	config := serverCtx.Config
+
+	config.SetRoot(c.validators[0].configDir())
+	config.Moniker = c.validators[0].getMoniker()
+
+	genFilePath := config.GenesisFile()
+	appGenState, genDoc, err := genutiltypes.GenesisStateFromGenFile(genFilePath)
+	if err != nil {
+		return err
+	}
+
+	if err := updateBankModule(appGenState); err != nil {
+		return err
+	}
+	if err := updateGovModule(appGenState); err != nil {
+		return err
+	}
+	if err := updateGenTxs(appGenState, c); err != nil {
+		return err
+	}
+	if err := updateClaimsModule(appGenState); err != nil {
+		return err
+	}
+	if err := updateStakingModule(appGenState); err != nil {
+		return err
+	}
+	if err := updateCrisisModule(appGenState); err != nil {
+		return err
+	}
+	if err := updateEvmModule(appGenState); err != nil {
+		return err
+	}
+	if err := updateInflationModule(appGenState); err != nil {
+		return err
+	}
+
+	bz, err := json.MarshalIndent(appGenState, "", "  ")
 	if err != nil {
 		return err
 	}
