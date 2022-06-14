@@ -263,8 +263,8 @@ func (v *internalValidator) signMsg(msgs ...sdk.Msg) (*sdktx.Tx, error) {
 	}
 
 	txBuilder.SetMemo(fmt.Sprintf("%s@%s:26656", v.nodeKey.ID(), v.instanceName()))
-	txBuilder.SetFeeAmount(sdk.NewCoins())
-	txBuilder.SetGasLimit(200000)
+	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin("aevmos", sdk.NewInt(30000000000))))
+	txBuilder.SetGasLimit(250000000000)
 
 	signerData := authsigning.SignerData{
 		ChainID:       v.chain.chainMeta.ID,

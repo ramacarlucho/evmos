@@ -37,9 +37,8 @@ type ValidatorConfig struct {
 
 const (
 	// common
-	CoinDenom  = "ucoin"
-	StakeDenom = "aevmos"
-	//IbcDenom      = "ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518"
+	CoinDenom     = "ucoin"
+	StakeDenom    = "aevmos"
 	MinGasPrice   = "0.000"
 	IbcSendAmount = 3300000000
 	VotingPeriod  = 30000000000 // 30 seconds
