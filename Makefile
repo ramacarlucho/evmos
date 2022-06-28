@@ -158,6 +158,16 @@ push-docker: build-docker
 $(MOCKS_DIR):
 	mkdir -p $(MOCKS_DIR)
 
+build-e2e-chain-init:
+	mkdir -p $(BUILDDIR)
+	go build -mod=readonly $(BUILD_FLAGS) -o $(BUILDDIR)/ ./tests/e2e/chain_init
+
+docker-build-debug:
+	@docker build -t evmos:debug --build-arg BASE_IMG_TAG=debug -f Dockerfile .
+
+docker-build-e2e-chain-init:
+	@docker build -t evmos-e2e-chain-init:debug -f tests/e2e/chain_init/Dockerfile .
+
 distclean: clean tools-clean
 
 clean:
@@ -188,12 +198,12 @@ RUNSIM         = $(TOOLS_DESTDIR)/runsim
 runsim: $(RUNSIM)
 $(RUNSIM):
 	@echo "Installing runsim..."
-	@(cd /tmp && ${GO_MOD} go install github.com/cosmos/tools/cmd/runsim@master)
+	@(cd /tmp && ${GO_MOD} go get github.com/cosmos/tools/cmd/runsim@master)
 
 statik: $(STATIK)
 $(STATIK):
 	@echo "Installing statik..."
-	@(cd /tmp && go install github.com/rakyll/statik@v0.1.6)
+	@(cd /tmp && go get github.com/rakyll/statik@v0.1.6)
 
 contract-tools:
 ifeq (, $(shell which stringer))
@@ -219,16 +229,9 @@ endif
 
 ifeq (, $(shell which protoc-gen-go))
 	@echo "Installing protoc-gen-go..."
-	@go get github.com/fjl/gencodec
-	@go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	@go get github.com/fjl/gencodec github.com/golang/protobuf/protoc-gen-go
 else
 	@echo "protoc-gen-go already installed; skipping..."
-endif
-
-ifeq (, $(shell which protoc-gen-go-grpc))
-	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
-else
-	@echo "protoc-gen-go-grpc already installed; skipping..."
 endif
 
 ifeq (, $(shell which protoc))
@@ -330,14 +333,17 @@ build-docs-versioned:
 
 test: test-unit
 test-all: test-unit test-race
-PACKAGES_UNIT=$(shell go list ./...)
+PACKAGES_UNIT=$(shell go list ./...  | grep -v /tests/)
 TEST_PACKAGES=./...
-TEST_TARGETS := test-unit test-unit-cover test-race
+TEST_TARGETS := test-unit test-unit-cover test-race test-e2e
 
 # Test runs-specific rules. To add a new test target, just add
 # a new rule, customise ARGS or TEST_PACKAGES ad libitum, and
 # append the new rule to the TEST_TARGETS list.
 test-unit: ARGS=-timeout=10m -race
+test-unit: TEST_PACKAGES=$(PACKAGES_UNIT)
+
+
 test-unit: TEST_PACKAGES=$(PACKAGES_UNIT)
 
 test-race: ARGS=-race
@@ -346,6 +352,9 @@ $(TEST_TARGETS): run-tests
 
 test-unit-cover: ARGS=-timeout=10m -race -coverprofile=coverage.txt -covermode=atomic
 test-unit-cover: TEST_PACKAGES=$(PACKAGES_UNIT)
+
+
+test-e2e: TEST_PACKAGES=$(shell go list ./... | grep /tests/)
 
 run-tests:
 ifneq (,$(shell which tparse 2>/dev/null))
