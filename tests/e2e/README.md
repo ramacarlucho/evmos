@@ -20,8 +20,9 @@ The `chain` package defines the logic necessary for initializing a chain by crea
 Testing a chain upgrade is a three step process:
 
 1. Build a chain initializer docker image with pre-upgrade version (e.g. `v3`)
-2. Build a chain initializer docker image with post-upgrade version (e.g. `v4`)
-3. Run tests on pre-upgrade version
+2. Make sure the docker tag for evmos pre-upgrade version is correctly set (e.g. `v3`)
+3. Build a docker image for the evmos post-upgrade version (e.g. `v4`)
+4. Run tests
 
 ### Create `pre-upgrade` image
 
