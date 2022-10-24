@@ -44,26 +44,26 @@ const (
 	VotingPeriod  = 30000000000 // 30 seconds
 	// chainA
 	ChainAID      = "evmos_9001-2"
-	CoinBalanceA  = 2000000000000000000
-	StakeBalanceA = 1100000000000000000
-	StakeAmountA  = 1000000000000000000
+	CoinBalanceA  = "2000000000000000000000000000"
+	StakeBalanceA = "1100000000000000000000000000"
+	StakeAmountA  = "1000000000000000000000000000"
 
 	// Currently only running one chain, so this is not used
 	// chainB
 	ChainBID      = "evmos_9000-2"
-	CoinBalanceB  = 5000000000000000000
-	StakeBalanceB = 4400000000000000000
-	StakeAmountB  = 4000000000000000000
+	CoinBalanceB  = "500000000000000000000000"
+	StakeBalanceB = "440000000000000000000000"
+	StakeAmountB  = "400000000000000000000000"
 )
 
 var (
-	StakeAmountIntA  = sdk.NewInt(StakeAmountA)
-	StakeAmountCoinA = sdk.NewCoin(StakeDenom, StakeAmountIntA)
-	StakeAmountIntB  = sdk.NewInt(StakeAmountB)
-	StakeAmountCoinB = sdk.NewCoin(StakeDenom, StakeAmountIntB)
+	StakeAmountIntA, _ = sdk.NewIntFromString(StakeAmountA)
+	StakeAmountCoinA   = sdk.NewCoin(StakeDenom, StakeAmountIntA)
+	StakeAmountIntB, _ = sdk.NewIntFromString(StakeAmountB)
+	StakeAmountCoinB   = sdk.NewCoin(StakeDenom, StakeAmountIntB)
 
-	InitBalanceStrA = fmt.Sprintf("%d%s,%d%s", CoinBalanceA, CoinDenom, StakeBalanceA, StakeDenom)
-	InitBalanceStrB = fmt.Sprintf("%d%s,%d%s", CoinBalanceB, CoinDenom, StakeBalanceB, StakeDenom)
+	InitBalanceStrA = fmt.Sprintf("%s%s,%s%s", CoinBalanceA, CoinDenom, StakeBalanceA, StakeDenom)
+	InitBalanceStrB = fmt.Sprintf("%s%s,%s%s", CoinBalanceB, CoinDenom, StakeBalanceB, StakeDenom)
 )
 
 func addAccount(path, moniker, amountStr string, accAddr sdk.AccAddress) error {
@@ -433,8 +433,7 @@ func initValidatorConfigs(c *internalChain, validatorConfigs []*ValidatorConfig)
 		valConfig.StateSync.Enable = false
 		valConfig.LogLevel = "info"
 
-		// TODO: POST V8.1.0 this line will be necessary
-		// valConfig.Storage = &tmconfig.StorageConfig{DiscardABCIResponses: false}
+		valConfig.Storage = &tmconfig.StorageConfig{DiscardABCIResponses: false}
 
 		var peers []string
 

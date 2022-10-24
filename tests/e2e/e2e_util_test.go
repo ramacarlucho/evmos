@@ -127,9 +127,9 @@ func (s *IntegrationTestSuite) submitProposal(c *chain.Chain) {
 			"--home",
 			"/evmos/.evmosd",
 			"tx", "gov", "submit-proposal",
-			"software-upgrade", "v8.1.0",
-			"--title=\"v8.0.0\"",
-			"--description=\"v8 upgrade proposal\"",
+			"software-upgrade", "v9.0.0",
+			"--title=\"v9.0.0\"",
+			"--description=\"v9 upgrade proposal\"",
 			"--upgrade-height=75",
 			"--upgrade-info=\"\"",
 			fmt.Sprintf("--chain-id=%s", c.ChainMeta.ID),
@@ -255,6 +255,53 @@ func (s *IntegrationTestSuite) voteProposal(c *chain.Chain) {
 		)
 
 		s.T().Logf("successfully voted for proposal on container: %s", s.valResources[c.ChainMeta.ID][i].Container.ID)
+	}
+}
+
+func (s *IntegrationTestSuite) fundCommunityPool(c *chain.Chain) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	s.T().Logf("funding community pool for chain-id: %s", c.ChainMeta.ID)
+	for i := range c.Validators {
+		exec, err := s.dkrPool.Client.CreateExec(docker.CreateExecOptions{
+			Context:      ctx,
+			AttachStdout: true,
+			AttachStderr: true,
+			Container:    s.valResources[c.ChainMeta.ID][i].Container.ID,
+			User:         "root",
+			Cmd: []string{
+				"/usr/bin/evmosd",
+				"--home",
+				"/evmos/.evmosd",
+				"tx", "distribution", "fund-community-pool", "93590289356801768542679aevmos", "--from=val", fmt.Sprintf("--chain-id=%s", c.ChainMeta.ID), "-b=block", "--yes", "--keyring-backend=test",
+			},
+		})
+		s.Require().NoError(err)
+
+		var (
+			outBuf bytes.Buffer
+			errBuf bytes.Buffer
+		)
+
+		err = s.dkrPool.Client.StartExec(exec.ID, docker.StartExecOptions{
+			Context:      ctx,
+			Detach:       false,
+			OutputStream: &outBuf,
+			ErrorStream:  &errBuf,
+		})
+
+		s.Require().NoErrorf(
+			err,
+			"failed to fund community pool; stdout: %s, stderr: %s", outBuf.String(), errBuf.String(),
+		)
+
+		s.Require().Truef(
+			strings.Contains(outBuf.String(), "code: 0"),
+			"tx returned non code 0"+outBuf.String(),
+		)
+
+		s.T().Logf("successfully funded community pool on container: %s", s.valResources[c.ChainMeta.ID][i].Container.ID)
 	}
 }
 

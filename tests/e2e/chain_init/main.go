@@ -27,13 +27,13 @@ func main() {
 
 	// To test locally
 	// chainID = "evmos_9001-1"
-	// dataDir = "/home/rama/test/chain"
+	// dataDir = "/home/rama/tests/chain"
 
 	if len(dataDir) == 0 {
 		panic("data-dir is required")
 	}
 
-	if err := os.MkdirAll(dataDir, 0o644); err != nil {
+	if err := os.MkdirAll(dataDir, 0o436); err != nil {
 		panic(err)
 	}
 
@@ -44,7 +44,7 @@ func main() {
 
 	b, _ := json.Marshal(createdChain)
 	fileName := fmt.Sprintf("%v/%v-encode", dataDir, chainID)
-	if err = os.WriteFile(fileName, b, 0o644); err != nil {
+	if err = os.WriteFile(fileName, b, 0o436); err != nil {
 		panic(err)
 	}
 }

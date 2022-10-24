@@ -119,7 +119,7 @@ func (s *IntegrationTestSuite) runValidators(c *chain.Chain, portOffset int) {
 				fmt.Sprintf("%s/:/evmos/.evmosd", val.ConfigDir),
 			},
 			Repository: "tharsishq/evmos",
-			Tag:        "v8.0.0",
+			Tag:        "v8.2.3",
 			Cmd: []string{
 				"/usr/bin/evmosd",
 				"start",
@@ -245,6 +245,7 @@ func (s *IntegrationTestSuite) initUpgrade() {
 	s.submitProposal(s.chains[0])
 	s.depositProposal(s.chains[0])
 	s.voteProposal(s.chains[0])
+	s.fundCommunityPool(s.chains[0])
 
 	// wait till all chains halt at upgrade height
 	for i := range s.chains[0].Validators {
